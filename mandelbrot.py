@@ -24,11 +24,10 @@ class Mandelbrot:
 				,0		#haut-bas
 		]
 
-		#resolution in proportion width/height
-		self.resolution=resolution
+		#resolution in proportion height/width
+		self.resolution=1./resolution
 
-		#invert resolution to have it in percentage
-		resolution=1./resolution
+		self.iterations=1E2
 
 		#define height to be applied
 		resolution_height=resolution*2.5
@@ -44,7 +43,7 @@ class Mandelbrot:
 		
 	
 
-	@jit
+	# @jit
 	def mandelbrot_core_calculation(self, size, limits, threading_index, doThread=True): #main method
 
 		width=np.int_(size)
@@ -52,7 +51,7 @@ class Mandelbrot:
 
 		matrix=np.zeros([width, height])
 
-		dx=(limits[1]-limits[0])
+		# dx=(limits[1]-limits[0])
 		# print("n:",n)
 		# print("dx:",dx)
 
@@ -60,8 +59,8 @@ class Mandelbrot:
 			for y,im in enumerate(np.linspace(limits[2],limits[3],height)):
 				c=complex(re,im)
 				z=0.0j
-				n=1.0917*(limits[1]-limits[0])**(-0.068) #resolution factor
-				for i in range(int(n*100)):
+				# n=1.0917*(limits[1]-limits[0])**(-0.068) #resolution factor
+				for i in range(int(self.iterations)):
 					
 					if abs(z) > self.calculation_limit:
 						matrix[x,y]=i
@@ -74,10 +73,6 @@ class Mandelbrot:
 		else:
 			self.current_mandelbrot=matrix
 			return matrix
-
-
-	def thread_mandelbrot(self,size,limits):
-		self.mandelbrot_core_calculation(size,limits)
 
 	def threadSequence(self,limits):
 		threads=list()
@@ -180,12 +175,17 @@ class Mandelbrot:
 
 		self.fig.canvas.mpl_connect('scroll_event', self.onscroll)  #listen to events
 		self.fig.canvas.mpl_connect('button_press_event', self.onclick)
-
+		
 		plt.show()
-		# self.threadSequence(self.limits)
 
 
 if __name__ == "__main__":
 	newMand=Mandelbrot()
-	newMand.size=400
+	newMand.limits= [-0.8539408213940964, -0.8538138082355331, -0.23550382944673076, -0.23543238454503895]
+	newMand.size=1500
+	newMand.iterations=400
 	newMand.show()
+
+	#TODO: timing between calculations
+		#TODO: if time > 3 sec decrease resolution and iterations
+	#TODO: loop from low res to high res
