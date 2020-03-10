@@ -2,7 +2,7 @@ from matplotlib import pyplot as plt
 from matplotlib import colors
 import matplotlib as mpl
 import time
-# from numba import jit
+from numba import jit
 import numpy as np
 import threading
 # import multiprocessing as mp
@@ -44,7 +44,7 @@ class Mandelbrot:
 		
 	
 
-	# @jit
+	@jit
 	def mandelbrot_core_calculation(self, size, limits, threading_index, doThread=True): #main method
 
 		width=np.int_(size)
@@ -63,7 +63,7 @@ class Mandelbrot:
 				n=1.0917*(limits[1]-limits[0])**(-0.068) #resolution factor
 				for i in range(int(n*100)):
 					
-					if abs(z)**2 > self.calculation_limit:
+					if abs(z) > self.calculation_limit:
 						matrix[x,y]=i
 						break
 					else:
@@ -101,9 +101,10 @@ class Mandelbrot:
 
 		for i in range(4):
 			t=threading.Thread(target=self.mandelbrot_core_calculation, args=(self.size/4,newlimits[i],i))
-			# threads.append(t)
+			threads.append(t)
 			t.start()
-			t.join()
+		for i in range(4):
+			threads[i].join()
 		row1=np.vstack((self.row[0],self.row[1]))
 		row2=np.vstack((self.row[2],self.row[3]))
 		self.current_mandelbrot=np.hstack((row1,row2))
@@ -138,10 +139,10 @@ class Mandelbrot:
 	def onscroll(self, event):
 
 		if event.step>0:
-			self.zoom = 3*event.step
+			zoom = 3*event.step
 			print("zoom:",zoom)
 		else: 
-			self.zoom = 0.7/abs(event.step)
+			zoom = 0.7/abs(event.step)
 			print("zoom:",zoom)
 		
 		limits=self.limits
@@ -164,11 +165,11 @@ class Mandelbrot:
 
 		mpl.rcParams['toolbar'] = 'None' #erase buttons
 
-		self.fig=plt.figure(dpi=120,frameon=False)
+		self.fig=plt.figure(frameon=False)
 		self.cmap = 'gnuplot2'
 
 		thismanager = plt.get_current_fig_manager()
-		# thismanager.window.wm_iconbitmap("mandel.ico")
+		# thismanager.window.wm_iconbitmap("./mandel.ico") #FIXME: icon doesn't work
 		thismanager.set_window_title('Mandelbrot Set')
 
 		self.ax = plt.Axes(self.fig, [0., 0., 1., 1.])
@@ -186,5 +187,5 @@ class Mandelbrot:
 
 if __name__ == "__main__":
 	newMand=Mandelbrot()
-	newMand.size=200
+	newMand.size=400
 	newMand.show()
