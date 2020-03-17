@@ -68,9 +68,10 @@ class Mandelbrot:
 				z=0.0j
 				# n=1.0917*(limits[1]-limits[0])**(-0.068) #resolution factor
 				for i in range(int(self.iterations)):
-					
 					if abs(z) > self.calculation_limit:
-						matrix[x,y]=i
+						# matrix[x,y]=1/i			# iteration lines visible
+						# matrix[x,y]=100-i			# inverted colors
+						matrix[x,y]=i			# standard
 						break
 					else:
 						# z=z*z+(c**3-1)/(2*c+1)  #mandelbrot + newton fractals
