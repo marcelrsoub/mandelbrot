@@ -70,7 +70,7 @@ class Mandelbrot:
 				for i in range(int(self.iterations)):
 					if abs(z) > self.calculation_limit:
 						# matrix[x,y]=1/i			# iteration lines visible
-						# matrix[x,y]=100-i			# inverted colors
+						# matrix[x,y]=self.iterations-i			# inverted colors
 						matrix[x,y]=i			# standard
 						break
 					else:
@@ -213,6 +213,6 @@ if __name__ == "__main__":
 	#TODO: loop from low res to high res
 	#TODO: saving 4k wallpaper method
 
-	#FIXME: quadrants not being calculated,  specially [3]
+	#FIXME: some quadrants are not being calculated,  specially [3]
 
 # %%
