@@ -1,5 +1,9 @@
 # Fractals: Mandelbrot, Sierpinski Triangle and Carpet.
 
+## mandelbrot_mt.py
+
+  Faster calculation of mandelbrot using multithread.
+
 ## mandelbrot.py
   Shows the mandelbrot set with a zooming system.
   

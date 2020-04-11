@@ -63,9 +63,6 @@ class Mandelbrot:
 		x_value_vec=np.linspace(limits[0],limits[1],width)
 		y_value_vec=np.linspace(limits[2],limits[3],height)
 
-		x_counter_vec=np.arange(0,width)
-		y_counter_vec=np.arange(0,width)
-
 		complex_matrix=np.broadcast_to(x_value_vec,(width,width))+y_value_vec.reshape(width,1)*1j
 		complex_matrix=complex_matrix.T
 		z=complex_matrix
@@ -90,7 +87,7 @@ class Mandelbrot:
 		newlimits[2]=[leftcorner[0],leftcorner[0]+xm,leftcorner[1]+ym,leftcorner[1]+2*ym]
 		newlimits[3]=[leftcorner[0]+xm,leftcorner[0]+2*xm,leftcorner[1]+ym,leftcorner[1]+2*ym]
 
-		numberOfThreads=4
+		# newlimits=
 		
 		matrix1=np.zeros((np.int(size/2), np.int(size/2)))
 		matrix2=np.zeros((np.int(size/2), np.int(size/2)))
@@ -102,13 +99,9 @@ class Mandelbrot:
 		for i,matrix in enumerate([matrix1,matrix2,matrix3,matrix4]):
 			t=threading.Thread(target=self.mandelbrot_core_calculation, args=(matrix,newlimits[i]))
 			threads=np.append(threads,t)
-			# t.start()
-		# while t.is_alive():
-		# 	t.join(0.2)
-		for thread in threads:
-			thread.start()
-		for thread in threads:
-			thread.join()
+			t.start()
+			while t.is_alive():
+				t.join()
 		row1=np.vstack((matrix1,matrix2))
 		row2=np.vstack((matrix3,matrix4))
 
