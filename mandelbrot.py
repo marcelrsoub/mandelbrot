@@ -69,7 +69,7 @@ class Mandelbrot:
 		# n=1.0917*(limits[1]-limits[0])**(-0.068) #resolution factor
 		for i in range(int(self.iterations)):
 			z=z*z+complex_matrix
-			mask=abs(z) > 0.5
+			mask=abs(z) > self.calculation_limit
 			matrix[mask]=i
 
 

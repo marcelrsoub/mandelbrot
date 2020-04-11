@@ -121,11 +121,7 @@ class Mandelbrot:
 		self.img.set_data(matrix.T)
 		self.img.set_extent(self.limits)
 		self.fig.canvas.draw()
-		# self.fig.clf()
 		self.ax.set_axis_off() #erasing buttons
-		# self.fig.add_axes(self.ax)
-		# self.img=self.ax.imshow(matrix.T, self.cmap, interpolation="bilinear", extent=limits)
-		# plt.show()
 
 	def onclick(self, event):
 
@@ -146,7 +142,6 @@ class Mandelbrot:
 		# for i in np.linspace(100.,self.size,np.int_(self.size/200)):
 		for i in [self.size]:
 			matrix=self.threadSequence(self.limits,i)
-			# time.sleep(0.5)
 			self.update_mandelbrot(matrix,limits)
 			
 
