@@ -34,7 +34,7 @@ class Mandelbrot:
 
 		self.row=np.zeros((4,np.int_(self.width/2),np.int_(self.width/2)))
 
-		self.iterations=1E2
+		self.iterations=100
 
 		#define height to be applied
 		resolution_height=resolution*2.5 #FIXME:
@@ -46,80 +46,42 @@ class Mandelbrot:
 			(-resolution_height/2-self.bouge[1])/self.zoom,
 			(resolution_height/2-self.bouge[1])/self.zoom
 		]
-
-		
 	
+	def mandelbrot_core_calculation(self,canvas, limits): #main method
 
-	# @jit
-	def mandelbrot_core_calculation(self, size, limits, threading_index, doThread=True): #main method
+		width=np.int(len(canvas))
+		height=np.int(width)
 
-		width=np.int_(size)
-		height=np.int_(width)
-
-		matrix=np.zeros((width, height))
+		matrix=canvas
 
 		# dx=(limits[1]-limits[0])
 		# print("n:",n)
 		# print("dx:",dx)
+		x_value_vec=np.linspace(limits[0],limits[1],width)
+		y_value_vec=np.linspace(limits[2],limits[3],height)
 
-		for x,re in enumerate(np.linspace(limits[0],limits[1],width)):
-			for y,im in enumerate(np.linspace(limits[2],limits[3],height)):
-				c=complex(re,im)
-				z=0.0j
-				# n=1.0917*(limits[1]-limits[0])**(-0.068) #resolution factor
-				for i in range(int(self.iterations)):
-					if abs(z) > self.calculation_limit:
-						# matrix[x,y]=1/i			# iteration lines visible
-						# matrix[x,y]=self.iterations-i			# inverted colors
-						matrix[x,y]=i			# standard
-						break
-					else:
-						# z=z*z+(c**3-1)/(2*c+1)  #mandelbrot + newton fractals
-						z=z*z+c
-		if doThread:
-			if threading_index==0:
-				self.row=np.zeros((4,width,height))
-			self.row[threading_index]=matrix		#FIXME: it ran threading_index=1 before 0
-		else:
-			self.current_mandelbrot=matrix
-		return matrix
+		x_counter_vec=np.arange(0,width)
+		y_counter_vec=np.arange(0,width)
 
-	def threadSequence(self,limits,size):
-		threads=np.array([])
-		newlimits=np.zeros((4,4))
+		complex_matrix=np.broadcast_to(x_value_vec,(width,width))+y_value_vec.reshape(width,1)*1j
+		complex_matrix=complex_matrix.T
+		z=complex_matrix
+		# n=1.0917*(limits[1]-limits[0])**(-0.068) #resolution factor
+		for i in range(int(self.iterations)):
+			z=z*z+complex_matrix
+			mask=abs(z) > 0.5
+			matrix[mask]=i
 
-		xm=(limits[1]-limits[0])/2 #=1.25
-		ym=(limits[3]-limits[2])/2 #=0.7
 
-		leftcorner=[limits[0],limits[2]]
+	def update_mandelbrot(self,size, limits):
 		
-		newlimits[0]=[leftcorner[0],leftcorner[0]+xm,leftcorner[1],leftcorner[1]+ym]
-		newlimits[1]=[leftcorner[0]+xm,leftcorner[0]+2*xm,leftcorner[1],leftcorner[1]+ym]
-		newlimits[2]=[leftcorner[0],leftcorner[0]+xm,leftcorner[1]+ym,leftcorner[1]+2*ym]
-		newlimits[3]=[leftcorner[0]+xm,leftcorner[0]+2*xm,leftcorner[1]+ym,leftcorner[1]+2*ym]
-
-		numberOfThreads=4
-
-		for i in [0,1,2,3]:
-			t=threading.Thread(target=self.mandelbrot_core_calculation, args=(size/2,newlimits[i],i))
-			threads=np.append(threads,t)
-			# t.start()
-		# while t.is_alive():
-		# 	t.join(0.2)
-		for thread in threads:
-			thread.start()
-		for thread in threads:
-			thread.join()
-		row1=np.vstack((self.row[0],self.row[1]))
-		row2=np.vstack((self.row[2],self.row[3]))
-		print
-		self.current_mandelbrot=np.hstack((row1,row2))
-
-	def update_mandelbrot(self,limits):
-		
-		matrix=self.current_mandelbrot
+		matrix=np.zeros((size,size))
+		tic=time.perf_counter()
+		self.mandelbrot_core_calculation(matrix,limits=limits)
+		toc=time.perf_counter()
+		print(f"Mandelbrot calculated in {toc - tic:0.4f} seconds")
 		self.img.set_data(matrix.T)
-		self.img.set_extent(self.limits)
+		self.img.set_extent(limits)
 		self.fig.canvas.draw()
 		# self.fig.clf()
 		self.ax.set_axis_off() #erasing buttons
@@ -144,10 +106,9 @@ class Mandelbrot:
 
 	def resolution_loop(self,limits):
 		# for i in np.linspace(100.,self.size,np.int_(self.size/200)):
-		for i in [self.size]:
-			self.threadSequence(self.limits,i)
-			# time.sleep(0.5)
-			self.update_mandelbrot(limits)
+
+		for size in [self.size]:
+			self.update_mandelbrot(size,limits)
 			
 
 	def onscroll(self, event):
@@ -176,7 +137,8 @@ class Mandelbrot:
 
 	def show(self):
 
-		matrix=self.mandelbrot_core_calculation(size=300,limits=self.limits,threading_index=0, doThread=False) #calculate first mandelbrot 
+		matrix=np.zeros((300,300))
+		self.mandelbrot_core_calculation(matrix,limits=self.limits) #calculate first mandelbrot 
 
 
 		mpl.rcParams['toolbar'] = 'None' #erase buttons
@@ -205,7 +167,6 @@ if __name__ == "__main__":
 	# newMand.limits= [-0.8539408213940964, -0.8538138082355331, -0.23550382944673076, -0.23543238454503895]
 	# newMand.limits= [-1.37190425354845, -1.3684748982672428, -0.0097858590032773, -0.006356503722070172]
 	# newMand.size=300
-	newMand.iterations=100
 	newMand.show()
 
 	#TODO: timing between calculations
