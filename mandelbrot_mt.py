@@ -58,7 +58,7 @@ class Mandelbrot:
 		matrix=canvas
 
 		# dx=(limits[1]-limits[0])
-		# print("n:",n)
+		
 		# print("dx:",dx)
 		x_value_vec=np.linspace(limits[0],limits[1],width)
 		y_value_vec=np.linspace(limits[2],limits[3],height)
@@ -66,8 +66,10 @@ class Mandelbrot:
 		complex_matrix=np.broadcast_to(x_value_vec,(width,width))+y_value_vec.reshape(width,1)*1j
 		complex_matrix=complex_matrix.T
 		z=complex_matrix
-		# n=1.0917*(limits[1]-limits[0])**(-0.068) #resolution factor
-		for i in range(int(self.iterations)):
+		# n=1/(abs(limits[1]-limits[0])*2)*10 #resolution factor
+		# print("n:",n)
+		n=self.iterations
+		for i in range(int(n)):
 			z=z*z+complex_matrix
 			mask=abs(z) > self.calculation_limit
 			matrix[mask]=i
@@ -75,10 +77,36 @@ class Mandelbrot:
 
 	def threadSequence(self,limits,size):
 		threads=np.array([])
+		
+
+		newlimits= self.split_limits(limits)
+		
+		matrix=np.zeros((4,np.int(size/2), np.int(size/2)))
+
+		tic = time.perf_counter()
+
+		for i in range(4):
+			t=threading.Thread(target=self.mandelbrot_core_calculation, args=(matrix[i,:,:],newlimits[i]))
+			threads=np.append(threads,t)
+			t.start()
+		while t.is_alive():
+			t.join()
+
+		row1=np.vstack((matrix[0],matrix[1]))
+		row2=np.vstack((matrix[2],matrix[3]))
+
+		matrix=np.hstack((row1,row2))
+
+		toc=time.perf_counter()
+		print(f"Mandelbrot calculated in {toc - tic:0.4f} seconds")
+		
+		return matrix
+	
+	def split_limits(self,limits):
 		newlimits=np.zeros((4,4))
 
-		xm=(limits[1]-limits[0])/2 #=1.25
-		ym=(limits[3]-limits[2])/2 #=0.7
+		xm=(limits[1]-limits[0])/2
+		ym=(limits[3]-limits[2])/2
 
 		leftcorner=[limits[0],limits[2]]
 		
@@ -87,28 +115,7 @@ class Mandelbrot:
 		newlimits[2]=[leftcorner[0],leftcorner[0]+xm,leftcorner[1]+ym,leftcorner[1]+2*ym]
 		newlimits[3]=[leftcorner[0]+xm,leftcorner[0]+2*xm,leftcorner[1]+ym,leftcorner[1]+2*ym]
 
-		# newlimits=
-		
-		matrix1=np.zeros((np.int(size/2), np.int(size/2)))
-		matrix2=np.zeros((np.int(size/2), np.int(size/2)))
-		matrix3=np.zeros((np.int(size/2), np.int(size/2)))
-		matrix4=np.zeros((np.int(size/2), np.int(size/2)))
-
-		tic = time.perf_counter()
-
-		for i,matrix in enumerate([matrix1,matrix2,matrix3,matrix4]):
-			t=threading.Thread(target=self.mandelbrot_core_calculation, args=(matrix,newlimits[i]))
-			threads=np.append(threads,t)
-			t.start()
-			while t.is_alive():
-				t.join()
-		row1=np.vstack((matrix1,matrix2))
-		row2=np.vstack((matrix3,matrix4))
-
-		toc=time.perf_counter()
-		print(f"Mandelbrot calculated in {toc - tic:0.4f} seconds")
-		
-		return np.hstack((row1,row2))
+		return newlimits
 
 	def update_mandelbrot(self,matrix,limits):
 		self.img.set_data(matrix.T)
@@ -132,9 +139,10 @@ class Mandelbrot:
 		self.resolution_loop(limits)
 
 	def resolution_loop(self,limits):
-		# for i in np.linspace(100.,self.size,np.int_(self.size/200)):
-		for i in [self.size]:
-			matrix=self.threadSequence(self.limits,i)
+		# for taille in [300,500,1000]:
+		for taille in [self.size]:
+
+			matrix=self.threadSequence(self.limits,taille)
 			self.update_mandelbrot(matrix,limits)
 			
 
@@ -164,7 +172,7 @@ class Mandelbrot:
 
 	def show(self):
 
-		matrix=np.zeros((300,300))
+		matrix=np.zeros((self.size,self.size))
 		self.mandelbrot_core_calculation(matrix,limits=self.limits) #calculate first mandelbrot 
 
 
@@ -181,7 +189,7 @@ class Mandelbrot:
 		self.ax.set_axis_off()
 		self.fig.add_axes(self.ax)
 
-		self.img=self.ax.imshow(matrix.T, self.cmap, interpolation="none", extent=self.limits)
+		self.img=self.ax.imshow(matrix.T, self.cmap, extent=self.limits)
 
 		self.fig.canvas.mpl_connect('scroll_event', self.onscroll)  #listen to events
 		self.fig.canvas.mpl_connect('button_press_event', self.onclick)
@@ -190,15 +198,16 @@ class Mandelbrot:
 
 
 if __name__ == "__main__":
-	newMand=Mandelbrot(300,resolution=1./1.)
+	newMand=Mandelbrot(500,resolution=1./1.)
 	# newMand.limits= [-0.8539408213940964, -0.8538138082355331, -0.23550382944673076, -0.23543238454503895]
 	# newMand.limits= [-1.37190425354845, -1.3684748982672428, -0.0097858590032773, -0.006356503722070172]
+	# newMand.limits= [-0.9171078484470955, -0.9171078462961165, -0.27754717237749293, -0.27754717022651393]
 	# newMand.size=300
-	newMand.iterations=100
+	# newMand.calculation_limit=16
+	# newMand.iterations=300
 	newMand.show()
 
-	#TODO: timing between calculations
-		#TODO: if time > 3 sec decrease resolution and iterations
+
 	#TODO: loop from low res to high res
 	#TODO: saving 4k wallpaper method
 
