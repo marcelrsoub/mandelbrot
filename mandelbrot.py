@@ -5,7 +5,9 @@ import matplotlib as mpl
 import time
 from numba import jit
 import numpy as np
+import copy
 import threading
+
 # import multiprocessing as mp
 
 
@@ -46,6 +48,7 @@ class Mandelbrot:
 			(-resolution_height/2-self.bouge[1])/self.zoom,
 			(resolution_height/2-self.bouge[1])/self.zoom
 		]
+		self.initial_limits=copy.deepcopy(self.limits)
 	
 	def mandelbrot_core_calculation(self,canvas, limits): #main method
 
@@ -66,8 +69,9 @@ class Mandelbrot:
 		complex_matrix=np.broadcast_to(x_value_vec,(width,width))+y_value_vec.reshape(width,1)*1j
 		complex_matrix=complex_matrix.T
 		z=complex_matrix
-		# n=1.0917*(limits[1]-limits[0])**(-0.068) #resolution factor
-		for i in range(int(self.iterations)):
+		n=1.0917E2*(limits[1]-limits[0])**(-0.078) #resolution factor
+		print("n: ", n)
+		for i in range(int(n)):
 			z=z*z+complex_matrix
 			mask=abs(z) > self.calculation_limit
 			matrix[mask]=i
@@ -109,6 +113,38 @@ class Mandelbrot:
 
 		for size in [self.size]:
 			self.update_mandelbrot(size,limits)
+
+	def generateZoomAnimation(self,final_limits=[-0.7765779444472669, -0.7765638318740933, -0.13442108343165082, -0.13440697085847714],frames=125):
+		self.limits=final_limits
+		self.show()
+
+		for i in range(frames):
+			zoom = 0.9
+			# print("zoom:",zoom)
+		
+			limits=self.limits
+
+			limits=[
+					limits[0]*(1+1/zoom)/2+limits[1]*(1-1/zoom)/2,  #calculate new x0
+					limits[1]*(1+1/zoom)/2+limits[0]*(1-1/zoom)/2,	#calculate new x1
+					limits[2]*(1+1/zoom)/2+limits[3]*(1-1/zoom)/2,	#calculate new y0
+					limits[3]*(1+1/zoom)/2+limits[2]*(1-1/zoom)/2	#calculate new y1
+			]
+
+			# if self.printLimits:
+			# 	print("limits=", limits)
+			self.resolution_loop(limits)
+			self.limits=limits
+			if(len(str(i))==1):
+				filename="000"+str(i)
+			elif((len(str(i))==2)):
+				filename="00"+str(i)
+			elif((len(str(i))==3)):
+				filename="0"+str(i)
+			else:
+				filename=str(i)
+			plt.savefig('./anim1/'+filename+'.png',bbox_inches='tight',frameon=None, pad_inches=0)
+
 			
 
 	def onscroll(self, event):
@@ -137,7 +173,7 @@ class Mandelbrot:
 
 	def show(self):
 
-		matrix=np.zeros((300,300))
+		matrix=np.zeros((self.width,self.height))
 		self.mandelbrot_core_calculation(matrix,limits=self.limits) #calculate first mandelbrot 
 
 
@@ -154,20 +190,22 @@ class Mandelbrot:
 		self.ax.set_axis_off()
 		self.fig.add_axes(self.ax)
 
-		self.img=self.ax.imshow(matrix.T, self.cmap, interpolation="none", extent=self.limits)
+		self.img=self.ax.imshow(matrix.T, self.cmap, interpolation="hanning", extent=self.limits)
 
 		self.fig.canvas.mpl_connect('scroll_event', self.onscroll)  #listen to events
 		self.fig.canvas.mpl_connect('button_press_event', self.onclick)
 		
-		plt.show()
+		# plt.show()
 
 
 if __name__ == "__main__":
-	newMand=Mandelbrot(300,resolution=1./1.)
+	newMand=Mandelbrot(1000,resolution=1./1.)
+	# newMand.limits = [-0.7765779444472669, -0.7765638318740933, -0.13442108343165082, -0.13440697085847714]
 	# newMand.limits= [-0.8539408213940964, -0.8538138082355331, -0.23550382944673076, -0.23543238454503895]
 	# newMand.limits= [-1.37190425354845, -1.3684748982672428, -0.0097858590032773, -0.006356503722070172]
 	# newMand.size=300
-	newMand.show()
+	newMand.generateZoomAnimation()
+	# newMand.show()
 
 	#TODO: timing between calculations
 		#TODO: if time > 3 sec decrease resolution and iterations
