@@ -7,6 +7,8 @@ from numba import jit
 import numpy as np
 import threading
 
+from numpy.core.numeric import Inf
+
 
 class Mandelbrot:
 
@@ -20,6 +22,7 @@ class Mandelbrot:
 		
 		
 		self.printLimits=True
+		self.mode='real_time'
 
 		self.bouge=[
 				0	#droite - gauche
@@ -67,11 +70,11 @@ class Mandelbrot:
 		complex_matrix=complex_matrix.T
 		z=complex_matrix
 		# n=1/(abs(limits[1]-limits[0])*2)*10 #resolution factor
-		# print("n:",n)
 		n=self.iterations
-		for i in range(int(n)):
+		# print("n:",n)
+		for i in range(np.int(n)):
 			z=z*z+complex_matrix
-			mask=abs(z) > self.calculation_limit
+			mask=np.abs(z) > self.calculation_limit
 			matrix[mask]=i
 
 
@@ -96,6 +99,8 @@ class Mandelbrot:
 		row2=np.vstack((matrix[2],matrix[3]))
 
 		matrix=np.hstack((row1,row2))
+		# print("min:",np.min(matrix))
+		# print("max:",np.max(matrix))
 
 		toc=time.perf_counter()
 		print(f"Mandelbrot calculated in {toc - tic:0.4f} seconds")
@@ -117,11 +122,25 @@ class Mandelbrot:
 
 		return newlimits
 
-	def update_mandelbrot(self,matrix,limits):
-		self.img.set_data(matrix.T)
-		self.img.set_extent(self.limits)
-		self.fig.canvas.draw()
-		self.ax.set_axis_off() #erasing buttons
+	def update_mandelbrot(self,matrix):
+
+		if( self.mode=='real_time'):
+			self.img.set_data(matrix.T)
+			self.img.set_extent(self.limits)
+			self.fig.canvas.draw()
+			self.ax.set_axis_off() #erasing buttons
+		if(self.mode=='animation'):
+			self.fig=plt.figure(frameon=False)
+			self.cmap = 'gnuplot2'
+			thismanager = plt.get_current_fig_manager()
+			thismanager.set_window_title('Mandelbrot Set')
+
+			self.ax = plt.Axes(self.fig, [0., 0., 1., 1.])
+			self.ax.set_axis_off()
+			self.fig.add_axes(self.ax)
+
+			print(self.iterations)
+			self.img=self.ax.imshow(matrix.T, self.cmap, extent=self.limits, interpolation='hanning', norm=colors.Normalize(vmin=0, vmax=self.iterations/2))
 
 	def onclick(self, event):
 
@@ -139,11 +158,49 @@ class Mandelbrot:
 		self.resolution_loop(limits)
 
 	def resolution_loop(self,limits):
-		# for taille in [300,500,1000]:
-		for taille in [self.size]:
+		# TODO for taille in [300,500,1000]:
 
-			matrix=self.threadSequence(self.limits,taille)
-			self.update_mandelbrot(matrix,limits)
+		matrix=self.threadSequence(self.limits,self.size)
+		self.update_mandelbrot(matrix)
+	
+	def generateZoomAnimation(self,final_limits=[-0.7765779444472669, -0.7765638318740933, -0.13442108343165082, -0.13440697085847714],frames=150):
+		self.mode='animation'
+		self.limits=final_limits
+		# self.pltInit()
+		step_size=np.int((self.iterations-100)/frames)
+
+		for i in range(frames):
+			print(str((i+1)/frames*100)+' %', flush=True);
+			zoom = 0.87
+			# print("zoom:",zoom)
+		
+			limits=self.limits
+
+			limits=[
+					limits[0]*(1+1/zoom)/2+limits[1]*(1-1/zoom)/2,  #calculate new x0
+					limits[1]*(1+1/zoom)/2+limits[0]*(1-1/zoom)/2,	#calculate new x1
+					limits[2]*(1+1/zoom)/2+limits[3]*(1-1/zoom)/2,	#calculate new y0
+					limits[3]*(1+1/zoom)/2+limits[2]*(1-1/zoom)/2	#calculate new y1
+			]
+
+			# if self.printLimits:
+			# 	print("limits=", limits)
+
+			self.limits=limits
+			# self.pltInit()
+			self.resolution_loop(limits)
+			
+			self.iterations-=step_size
+			if(len(str(i))==1):
+				filename="000"+str(i)
+			elif((len(str(i))==2)):
+				filename="00"+str(i)
+			elif((len(str(i))==3)):
+				filename="0"+str(i)
+			else:
+				filename=str(i)
+			plt.savefig('./anim/'+filename+'.png',bbox_inches='tight', pad_inches=0)
+			plt.close()
 			
 
 	def onscroll(self, event):
@@ -169,11 +226,27 @@ class Mandelbrot:
 		limits=self.limits
 		self.resolution_loop(limits)
 
+	def pltInit(self):
+		matrix=np.zeros((self.size,self.size))
+		self.mandelbrot_core_calculation(matrix,limits=self.limits) #calculate first mandelbrot
+		mpl.rcParams['toolbar'] = 'None' #erase buttons
+
+		self.fig=plt.figure(frameon=False)
+		self.cmap = 'gnuplot2'
+		thismanager = plt.get_current_fig_manager()
+		# thismanager.window.wm_iconbitmap("./mandel.ico") #FIXME: icon doesn't work
+		thismanager.set_window_title('Mandelbrot Set')
+
+		self.ax = plt.Axes(self.fig, [0., 0., 1., 1.])
+		self.ax.set_axis_off()
+		self.fig.add_axes(self.ax)
+
+		self.img=self.ax.imshow(matrix.T, self.cmap, extent=self.limits, norm=colors.Normalize(), aspect='equal')
 
 	def show(self):
 
 		matrix=np.zeros((self.size,self.size))
-		self.mandelbrot_core_calculation(matrix,limits=self.limits) #calculate first mandelbrot 
+		self.mandelbrot_core_calculation(matrix,limits=self.limits) #calculate first mandelbrot
 
 
 		mpl.rcParams['toolbar'] = 'None' #erase buttons
@@ -189,7 +262,7 @@ class Mandelbrot:
 		self.ax.set_axis_off()
 		self.fig.add_axes(self.ax)
 
-		self.img=self.ax.imshow(matrix.T, self.cmap, extent=self.limits)
+		self.img=self.ax.imshow(matrix.T, self.cmap, extent=self.limits, norm=colors.Normalize())
 
 		self.fig.canvas.mpl_connect('scroll_event', self.onscroll)  #listen to events
 		self.fig.canvas.mpl_connect('button_press_event', self.onclick)
@@ -199,13 +272,15 @@ class Mandelbrot:
 
 if __name__ == "__main__":
 	newMand=Mandelbrot(500,resolution=1./1.)
+	newMand.limits= [-0.7765715290179841, -0.7765715096591733, -0.1344143356761133, -0.13441431631730238]
+	# newMand.limits= [-0.7765719564040663, -0.7765703883403803, -0.1344149614496769, -0.13441339338599093]
 	# newMand.limits= [-0.8539408213940964, -0.8538138082355331, -0.23550382944673076, -0.23543238454503895]
 	# newMand.limits= [-1.37190425354845, -1.3684748982672428, -0.0097858590032773, -0.006356503722070172]
 	# newMand.limits= [-0.9171078484470955, -0.9171078462961165, -0.27754717237749293, -0.27754717022651393]
-	# newMand.size=300
-	# newMand.calculation_limit=16
-	# newMand.iterations=300
-	newMand.show()
+	newMand.iterations=7000
+	newMand.calculation_limit=2
+	newMand.generateZoomAnimation(final_limits=newMand.limits)
+	# newMand.show()
 
 
 	#TODO: loop from low res to high res

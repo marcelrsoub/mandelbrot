@@ -9,4 +9,4 @@ for filename in sorted(filenames):
     # print(filename[0:-3])
     if(filename[-3:]=="png"):
         images.append(imageio.imread("./anim/"+filename))
-imageio.mimsave('./movie3.gif', images)
+imageio.mimsave('./movie9.gif', images)
