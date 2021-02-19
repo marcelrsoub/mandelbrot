@@ -1,6 +1,6 @@
 # Fractals: Mandelbrot, Sierpinski Triangle and Carpet.
 
-![Mandelbrot Zoom](anim_zoom.gif)
+![Mandelbrot Zoom](movie10.gif)
 
 ## mandelbrot_mt.py
 
@@ -8,10 +8,7 @@
   
   **Click** to move the center of the canvas to the coordinates of the pointer.
   **Scroll** to zoom in and out.
-  
-  Have fun!
-  
-  Printing the limits can also be turned on so that you can save the limits (on the console) and use them on mandelbrot_wallpaper.py to create a 4k wallpaper.
+  Press **Ctrl+L** to print the limits, **up arrow** to increase the number of iterations and **down arrow** to decrease.
 
 ### mandelbrot_thickness.py
 

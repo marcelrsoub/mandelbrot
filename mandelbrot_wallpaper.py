@@ -88,17 +88,3 @@ matrix=mandelbrot(pixels,limits,style='mosaic',n=100)
 ax.imshow(matrix.T, cmap, interpolation="bilinear", extent=limits)
 plt.show()
 # plt.savefig('wallpaper.png',bbox_inches=None,frameon=None, pad_inches=0)
-
-
-
-# ANIMATION GIF N VARIABLE
-# n_range=[5,7,10,20,30,50,70,100]
-
-# for n in n_range:
-# 	matrix=mandelbrot(pixels,limits,n)
-# 	ax.imshow(matrix.T, cmap, interpolation="bilinear", extent=limits)
-	
-# 	plt.savefig('./gif/test-n-'+str(n)+'.png',bbox_inches=None,frameon=None, pad_inches=0)
-
-
-#----------------------------------------------------------------------

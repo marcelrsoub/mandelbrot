@@ -22,7 +22,7 @@ class Mandelbrot:
         self.zoom = 1  #  initializing current zoom value. default: 1
 
         self.printLimits = True
-        self.mode = 'real_time'
+        self.mode = 'real_time' # or 'animation'
 
         self.bouge = [
             0  # droite - gauche
@@ -49,7 +49,9 @@ class Mandelbrot:
             (resolution_height/2-self.bouge[1])/self.zoom
         ]
 
-    # @jit
+        self.stop_calculation=False # stop threads
+
+    @jit(forceobj=True)
     def mandelbrot_core_calculation(self, canvas, limits):  # main method
 
         width = int(len(canvas))
@@ -72,8 +74,10 @@ class Mandelbrot:
         # n=int(3.0917E2*(limits[1]-limits[0])**(-0.2)) #resolution factor
         # print("n:",n)
         for i in range(int(n)):
-            z = np.power(z,2,dtype=np.complex64)+complex_matrix
-            mask = np.abs(z,dtype=np.complex64) > self.calculation_limit
+            if(self.stop_calculation==True):
+                break
+            z = np.power(z,2)+complex_matrix
+            mask = np.abs(z) > self.calculation_limit
             matrix[mask] = i
 
     def threadSequence(self, limits, size):
@@ -88,10 +92,14 @@ class Mandelbrot:
         for i in range(4):
             t = threading.Thread(target=self.mandelbrot_core_calculation, args=(
                 matrix[i, :, :], newlimits[i]))
-            threads = np.append(threads, t,dtype=np.complex64)
+            threads = np.append(threads, t)
             t.start()
         while t.is_alive():
             t.join()
+
+        if(self.stop_calculation==True):
+
+            return
 
         row1 = np.vstack((matrix[0], matrix[1]))
         row2 = np.vstack((matrix[2], matrix[3]))
@@ -102,6 +110,9 @@ class Mandelbrot:
 
         toc = time.perf_counter()
         print(f"Mandelbrot calculated in {toc - tic:0.4f} seconds")
+        self.matrix_full=matrix
+
+        self.update_mandelbrot(matrix)
 
         return matrix
 
@@ -130,7 +141,7 @@ class Mandelbrot:
             self.img.set_data(matrix.T)
             self.img.set_extent(self.limits)
             self.fig.canvas.draw()
-            self.ax.set_axis_off()  # erasing buttons
+            # self.ax.set_axis_off()  # erasing buttons
         if(self.mode == 'animation'):
             self.fig = plt.figure(frameon=False)
             self.cmap = 'gnuplot2'
@@ -144,9 +155,15 @@ class Mandelbrot:
             print(self.iterations)
             self.img = self.ax.imshow(matrix.T, self.cmap, extent=self.limits,
                                       interpolation='hanning', norm=colors.Normalize(vmin=0, vmax=self.iterations/2))
+        if(self.mode == 'refresh_graph'):
+            print("Graph refreshed.")
+            self.img = self.ax.imshow(matrix.T, self.cmap, extent=self.limits,
+                                      interpolation='hanning', norm=colors.Normalize(vmin=0, vmax=self.iterations/2))
+            self.fig.canvas.draw()
+            self.mode='real_time'
 
     def onclick(self, event):
-
+        self.stop_calculation=True
         x0 = self.limits[0]+abs(self.limits[1]-self.limits[0])/2
         y0 = self.limits[2]+abs(self.limits[3]-self.limits[2])/2
 
@@ -159,19 +176,29 @@ class Mandelbrot:
             print("limits=", self.limits)
 
         limits = self.limits
+        self.stop_calculation=False
         self.resolution_loop(limits)
 
     def resolution_loop(self, limits):
-        # TODO for taille in [300,500,1000]:
 
-        matrix = self.threadSequence(self.limits, self.size)
-        self.update_mandelbrot(matrix)
+        if(self.mode=='real_time' or self.mode=='refresh_graph' ):
+            
+            for taille in [100, self.size]:
+                threads = np.array([])
+                t = threading.Thread(target=self.threadSequence, args=(
+                    self.limits, taille))
+                # threads = np.append(threads, t)
+                t.start()
+            self.stop_calculation=False
+        elif(self.mode=='animation'):
+            self.threadSequence(self.limits, self.size)
 
     def generateZoomAnimation(self, final_limits=[-0.7765779444472669, -0.7765638318740933, -0.13442108343165082, -0.13440697085847714], zoom=0.87, frames=150):
         self.mode = 'animation'
         self.limits = final_limits
         # self.pltInit()
         step_size = int((self.iterations-100)/frames)
+        initial_iterations=self.iterations
 
         for i in range(frames):
             print(str((i+1)/frames*100)+' %', flush=True)
@@ -197,7 +224,7 @@ class Mandelbrot:
             # self.pltInit()
             self.resolution_loop(limits)
 
-            self.iterations -= step_size
+            self.iterations = initial_iterations*np.exp(np.log(100/initial_iterations)/frames*i)
             if(len(str(i)) == 1):
                 filename = "000"+str(i)
             elif((len(str(i)) == 2)):
@@ -211,7 +238,7 @@ class Mandelbrot:
             plt.close()
 
     def onscroll(self, event):
-
+        self.stop_calculation=True
         if event.step > 0:
             zoom = 3*event.step
             print("zoom:", zoom)
@@ -231,7 +258,28 @@ class Mandelbrot:
         if self.printLimits:
             print("limits=", self.limits)
         limits = self.limits
+        self.stop_calculation=False
         self.resolution_loop(limits)
+
+    def onpress(self, event):
+        # print("key pressed:",event.key)
+        if event.key == 'up':
+            self.stop_calculation=True
+            self.iterations+=self.iterations*0.25
+            print("iterations=", self.iterations)
+            self.mode='refresh_graph'
+            self.stop_calculation=False
+            self.resolution_loop(self.limits)
+        elif(event.key == 'down'):
+            self.stop_calculation=True
+            self.iterations-=self.iterations*0.25
+            print("iterations=", self.iterations)
+            self.mode='refresh_graph'
+            self.stop_calculation=False
+            self.resolution_loop(self.limits)
+        elif(event.key == 'ctrl+l'):
+            print("limits=", self.limits)
+
 
     def pltInit(self):
         matrix = np.zeros((self.size, self.size))
@@ -252,8 +300,14 @@ class Mandelbrot:
         self.img = self.ax.imshow(
             matrix.T, self.cmap, extent=self.limits, norm=colors.Normalize(), aspect='equal')
 
-    def deZoom(self, zoom, times):
-        for i in range(times):
+    def deZoom(self, zoom, frames):
+        """Method that enables the user to preview the zooming out executed by generateZoomAnimation
+
+        Args:
+            zoom (float): <1 if zooming out and >1 if zooming in
+            frames (int): number of frames
+        """
+        for i in range(frames):
             limits = self.limits
 
             self.limits = [
@@ -270,6 +324,7 @@ class Mandelbrot:
     def show(self):
 
         matrix = np.zeros((self.size, self.size))
+
         self.mandelbrot_core_calculation(
             matrix, limits=self.limits)  # calculate first mandelbrot
 
@@ -292,27 +347,27 @@ class Mandelbrot:
         self.fig.canvas.mpl_connect(
             'scroll_event', self.onscroll)  # listen to events
         self.fig.canvas.mpl_connect('button_press_event', self.onclick)
+        self.fig.canvas.mpl_connect('key_press_event', self.onpress)
 
         plt.show()
 
 
 if __name__ == "__main__":
-    newMand = Mandelbrot(800)
-    newMand.limits = [-1.348944719491528, -1.3489445452622297, -
-                      0.0628381714457414, -0.06283799721644297]
+    newMand = Mandelbrot(1000)
+    # newMand.limits = [-1.348944719491528, -1.3489445452622297, -0.0628381714457414, -0.06283799721644297]
     # newMand.limits= [-0.7765715290179841, -0.7765715096591733, -0.1344143356761133, -0.13441431631730238]
     # newMand.limits= [-0.7765719564040663, -0.7765703883403803, -0.1344149614496769, -0.13441339338599093]
     # newMand.limits= [-0.8539408213940964, -0.8538138082355331, -0.23550382944673076, -0.23543238454503895]
     # newMand.limits= [-1.37190425354845, -1.3684748982672428, -0.0097858590032773, -0.006356503722070172]
     # newMand.limits= [-0.9171078484470955, -0.9171078462961165, -0.27754717237749293, -0.27754717022651393]
-    newMand.iterations = 13000
+    newMand.iterations = 100
     newMand.calculation_limit = 2
-    newMand.generateZoomAnimation(final_limits=newMand.limits, zoom=0.89, frames=150)
+    # newMand.generateZoomAnimation(final_limits=newMand.limits, zoom=0.89, frames=150)
 
     # newMand.deZoom(0.89,149)
-    # newMand.show()
+    newMand.show()
 
-    # TODO: loop from low res to high res
+    # DONE: loop from low res to high res
     # TODO: saving 4k wallpaper method
 
 # %%
