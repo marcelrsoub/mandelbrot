@@ -1,11 +1,10 @@
 # Fractals: Mandelbrot, Sierpinski Triangle and Carpet.
 
+![Mandelbrot Zoom](anim_zoom.gif)
+
 ## mandelbrot_mt.py
 
-  Faster calculation of mandelbrot using multithread.
-
-## mandelbrot.py
-  Shows the mandelbrot set with a zooming system.
+  Calculation of mandelbrot using multithread. Shows the mandelbrot set with a zooming system.
   
   **Click** to move the center of the canvas to the coordinates of the pointer.
   **Scroll** to zoom in and out.
@@ -13,6 +12,7 @@
   Have fun!
   
   Printing the limits can also be turned on so that you can save the limits (on the console) and use them on mandelbrot_wallpaper.py to create a 4k wallpaper.
+
 ### mandelbrot_thickness.py
 
   Different way of calculating the mandelbrot set where each iteration has a different color.
