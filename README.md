@@ -1,6 +1,6 @@
 # Fractals: Mandelbrot, Sierpinski Triangle and Carpet.
 
-![Mandelbrot Zoom](movie10.gif)
+![Mandelbrot exploration](demo2.gif)
 
 ## mandelbrot_mt.py
 
@@ -9,6 +9,9 @@
   **Click** to move the center of the canvas to the coordinates of the pointer.
   **Scroll** to zoom in and out.
   Press **Ctrl+L** to print the limits, **up arrow** to increase the number of iterations and **down arrow** to decrease.
+
+
+![Mandelbrot Zoom](movie10.gif)
 
 ### mandelbrot_thickness.py
 
