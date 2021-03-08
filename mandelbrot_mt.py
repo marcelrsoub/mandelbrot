@@ -1,4 +1,5 @@
 # %%
+from logging import raiseExceptions
 from matplotlib import pyplot as plt
 from matplotlib import colors
 import matplotlib as mpl
@@ -23,6 +24,7 @@ class Mandelbrot:
 
         self.printLimits = True
         self.mode = 'real_time' # or 'animation'
+        self.style='normal'
 
         self.bouge = [
             0  # droite - gauche
@@ -50,8 +52,9 @@ class Mandelbrot:
         ]
 
         self.stop_calculation=False # stop threads
+        self.number_of_divisions=2
 
-    @jit(forceobj=True)
+    # @jit(forceobj=True)
     def mandelbrot_core_calculation(self, canvas, limits):  # main method
 
         width = int(len(canvas))
@@ -73,23 +76,50 @@ class Mandelbrot:
         n = self.iterations
         # n=int(3.0917E2*(limits[1]-limits[0])**(-0.2)) #resolution factor
         # print("n:",n)
-        for i in range(int(n)):
-            if(self.stop_calculation==True):
-                break
-            z = np.power(z,2)+complex_matrix
-            mask = np.abs(z) > self.calculation_limit
-            matrix[mask] = i
+        if self.style=='normal':
+            for i in range(int(n)):
+                if(self.stop_calculation==True):
+                    break
+                z = np.power(z,2)+complex_matrix
+                mask = np.abs(z) > self.calculation_limit
+                matrix[mask] = i
+        elif self.style=='thickness':
+            for i in range(int(n)):
+                if(self.stop_calculation==True):
+                    break
+                z = np.power(z,2)+complex_matrix
+                mask = np.abs(z) > self.calculation_limit
+                if mask.any():
+                    matrix[mask] = i%2
+        elif self.style=='mosaic':
+            for i in range(int(n)):
+                if(self.stop_calculation==True):
+                    break
+                z = np.power(z,2)+complex_matrix
+                mask = np.abs(z) > self.calculation_limit
+                if mask.any():
+                    p=width
+                    q=height
+                    x2=(np.floor(p*np.mod(np.real(np.log10(np.log10(z)*q/p)),1)/255.0))
+                    y2=(np.floor((q*np.mod(2*np.angle(complex_matrix),1)+1)/255.0))
+                    # matrix[mask] = x2[mask]+y2[mask]+(i+x2[mask]+y2[mask])/(i+1)
+                    matrix[mask] = np.angle(complex_matrix)[mask]+i%2+y2[mask]
+
+        else:
+            raise ValueError("style `"+self.style+"` non existant.")
+        
 
     def threadSequence(self, limits, size):
+        
         threads = np.array([])
 
         newlimits = self.split_limits(limits)
 
-        matrix = np.zeros((4, int(size/2), int(size/2)))
+        matrix = np.zeros((self.number_of_divisions**2, int(size/self.number_of_divisions), int(size/self.number_of_divisions)))
 
         tic = time.perf_counter()
 
-        for i in range(4):
+        for i in range(self.number_of_divisions**2):
             t = threading.Thread(target=self.mandelbrot_core_calculation, args=(
                 matrix[i, :, :], newlimits[i]))
             threads = np.append(threads, t)
@@ -101,10 +131,17 @@ class Mandelbrot:
 
             return
 
-        row1 = np.vstack((matrix[0], matrix[1]))
-        row2 = np.vstack((matrix[2], matrix[3]))
+        row=np.zeros((self.number_of_divisions,int(size/self.number_of_divisions), int(size/self.number_of_divisions)))
+        rows=np.zeros((self.number_of_divisions,int(size/self.number_of_divisions), int(size/self.number_of_divisions)*self.number_of_divisions))
+        for i in range(self.number_of_divisions):
+            for counter,j in enumerate(range(i*self.number_of_divisions,i*self.number_of_divisions+self.number_of_divisions)):
+                row[counter]=matrix[j]
+            rows[i] = np.hstack(row)
+            row=np.zeros((self.number_of_divisions,int(size/self.number_of_divisions), int(size/self.number_of_divisions)))
 
-        matrix = np.hstack((row1, row2))
+        
+        matrix=np.vstack(rows)
+
         # print("min:",np.min(matrix))
         # print("max:",np.max(matrix))
 
@@ -117,21 +154,22 @@ class Mandelbrot:
         return matrix
 
     def split_limits(self, limits):
-        newlimits = np.zeros((4, 4))
+        newlimits1 = np.zeros((self.number_of_divisions**2, 4))
 
-        xm = (limits[1]-limits[0])/2
-        ym = (limits[3]-limits[2])/2
+        xm = np.abs(limits[1]-limits[0])/(self.number_of_divisions)
+        ym = (limits[3]-limits[2])/(self.number_of_divisions)
 
-        leftcorner = [limits[0], limits[2]]
+        x_vector=np.linspace(limits[0],limits[1]-xm,self.number_of_divisions)
+        y_vector=np.linspace(limits[2],limits[3]-ym,self.number_of_divisions)
 
-        newlimits[0] = [leftcorner[0], leftcorner[0] +
-                        xm, leftcorner[1], leftcorner[1]+ym]
-        newlimits[1] = [leftcorner[0]+xm, leftcorner[0] +
-                        2*xm, leftcorner[1], leftcorner[1]+ym]
-        newlimits[2] = [leftcorner[0], leftcorner[0] +
-                        xm, leftcorner[1]+ym, leftcorner[1]+2*ym]
-        newlimits[3] = [leftcorner[0]+xm, leftcorner[0] +
-                        2*xm, leftcorner[1]+ym, leftcorner[1]+2*ym]
+        newlimits=np.zeros((self.number_of_divisions**2, 4))
+        counter=0
+        for i,x in enumerate(x_vector):
+            for j,y in enumerate(y_vector):
+                
+                limit_here=np.array([x,x+xm,y,y+ym])
+                newlimits[counter]=limit_here
+                counter+=1
 
         return newlimits
 
@@ -353,7 +391,7 @@ class Mandelbrot:
 
 
 if __name__ == "__main__":
-    newMand = Mandelbrot(1000)
+    newMand = Mandelbrot(500)
     # newMand.limits = [-1.348944719491528, -1.3489445452622297, -0.0628381714457414, -0.06283799721644297]
     # newMand.limits= [-0.7765715290179841, -0.7765715096591733, -0.1344143356761133, -0.13441431631730238]
     # newMand.limits= [-0.7765719564040663, -0.7765703883403803, -0.1344149614496769, -0.13441339338599093]
@@ -362,12 +400,15 @@ if __name__ == "__main__":
     # newMand.limits= [-0.9171078484470955, -0.9171078462961165, -0.27754717237749293, -0.27754717022651393]
     newMand.iterations = 100
     newMand.calculation_limit = 2
+    newMand.number_of_divisions = 4
+    # newMand.style='thickness'
     # newMand.generateZoomAnimation(final_limits=newMand.limits, zoom=0.89, frames=150)
 
     # newMand.deZoom(0.89,149)
     newMand.show()
 
     # DONE: loop from low res to high res
+    # TODO: click doesn't recalculate already generated areas
     # TODO: saving 4k wallpaper method
 
 # %%
