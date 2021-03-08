@@ -2,11 +2,8 @@
 from matplotlib import pyplot as plt
 from matplotlib import colors
 import matplotlib as mpl
-from mpmath import mp
 from numba import jit
 import numpy as np
-
-mp.dps = 100
 
 @jit
 def mandelbrot(size=1500,limits=0): #main mandelbrot calculus function
