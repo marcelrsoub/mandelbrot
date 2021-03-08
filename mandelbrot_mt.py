@@ -131,10 +131,17 @@ class Mandelbrot:
 
             return
 
-        row1 = np.hstack((matrix[0], matrix[1]))
-        row2 = np.hstack((matrix[2], matrix[3]))
+        row=np.zeros((self.number_of_divisions,int(size/self.number_of_divisions), int(size/self.number_of_divisions)))
+        rows=np.zeros((self.number_of_divisions,int(size/self.number_of_divisions), int(size/self.number_of_divisions)*self.number_of_divisions))
+        for i in range(self.number_of_divisions):
+            for counter,j in enumerate(range(i*self.number_of_divisions,i*self.number_of_divisions+self.number_of_divisions)):
+                row[counter]=matrix[j]
+            rows[i] = np.hstack(row)
+            row=np.zeros((self.number_of_divisions,int(size/self.number_of_divisions), int(size/self.number_of_divisions)))
 
-        matrix = np.vstack((row1, row2))
+        
+        matrix=np.vstack(rows)
+
         # print("min:",np.min(matrix))
         # print("max:",np.max(matrix))
 
@@ -156,8 +163,6 @@ class Mandelbrot:
         y_vector=np.linspace(limits[2],limits[3]-ym,self.number_of_divisions)
 
         newlimits=np.zeros((self.number_of_divisions**2, 4))
-
-        # newlimits[0]=np.array([[x_vector[0],x_vector[0]+xm,y_vector[0],y_vector[0]+ym]])
         counter=0
         for i,x in enumerate(x_vector):
             for j,y in enumerate(y_vector):
@@ -165,25 +170,6 @@ class Mandelbrot:
                 limit_here=np.array([x,x+xm,y,y+ym])
                 newlimits[counter]=limit_here
                 counter+=1
-
-        leftcorner = [limits[0], limits[2]]
-
-        newlimits1[0] = [leftcorner[0], leftcorner[0] +
-                        xm, leftcorner[1], leftcorner[1]+ym]
-        newlimits1[1] = [leftcorner[0]+xm, leftcorner[0] +
-                        2*xm, leftcorner[1], leftcorner[1]+ym]
-        newlimits1[2] = [leftcorner[0], leftcorner[0] +
-                        xm, leftcorner[1]+ym, leftcorner[1]+2*ym]
-        newlimits1[3] = [leftcorner[0]+xm, leftcorner[0] +
-                        2*xm, leftcorner[1]+ym, leftcorner[1]+2*ym]
-
-        test= (newlimits == newlimits1).all()
-
-        # TODO:
-        # FIXME: bug here
-
-        # if(not test):
-        #     raise ValueError("Not equal.")
 
         return newlimits
 
@@ -414,6 +400,7 @@ if __name__ == "__main__":
     # newMand.limits= [-0.9171078484470955, -0.9171078462961165, -0.27754717237749293, -0.27754717022651393]
     newMand.iterations = 100
     newMand.calculation_limit = 2
+    newMand.number_of_divisions = 4
     # newMand.style='thickness'
     # newMand.generateZoomAnimation(final_limits=newMand.limits, zoom=0.89, frames=150)
 
@@ -421,6 +408,7 @@ if __name__ == "__main__":
     newMand.show()
 
     # DONE: loop from low res to high res
+    # TODO: click doesn't recalculate already generated areas
     # TODO: saving 4k wallpaper method
 
 # %%
