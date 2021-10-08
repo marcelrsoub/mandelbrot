@@ -53,6 +53,7 @@ class Mandelbrot:
 
         self.stop_calculation = False  # stop threads
         self.number_of_divisions = 2
+        self.mouse_down = False
 
     # @jit(forceobj=True)
     def mandelbrot_core_calculation(self, canvas, limits):  # main method
@@ -152,7 +153,7 @@ class Mandelbrot:
         # print("max:",np.max(matrix))
 
         toc = time.perf_counter()
-        print(f"Mandelbrot calculated in {toc - tic:0.4f} seconds")
+        print(f"Mandelbrot calculated in {toc - tic:0.4f} seconds") # executes on every resolution loop
         self.matrix_full = matrix
 
         self.update_mandelbrot(matrix)
@@ -209,11 +210,47 @@ class Mandelbrot:
             self.mode = 'real_time'
 
     def onclick(self, event):
-        self.stop_calculation = True
+        self.mouse_down = True;
+        self.x0=event.xdata
+        self.y0=event.ydata
         x0 = self.limits[0]+abs(self.limits[1]-self.limits[0])/2
         y0 = self.limits[2]+abs(self.limits[3]-self.limits[2])/2
 
-        self.bouge = [x0-event.xdata, y0-event.ydata]
+        self.bouge = [0, 0]
+
+        # self.limits = [(self.limits[0]-self.bouge[0]), (self.limits[1]-self.bouge[0]),
+        #                (self.limits[2]+self.bouge[1]), (self.limits[3]+self.bouge[1])]
+
+    def onpan(self,event):
+        if(self.mouse_down and (event.xdata != None or event.ydata != None)):
+            self.stop_calculation = True
+            # x0 = self.limits[0]+abs(self.limits[1]-self.limits[0])/2
+            # y0 = self.limits[2]+abs(self.limits[3]-self.limits[2])/2
+
+            multiplier=1
+            size=20
+
+            self.bouge = [-(self.x0 -event.xdata*multiplier), -(self.y0-event.ydata*multiplier)]
+
+            limits = [(self.limits[0]-self.bouge[0]), (self.limits[1]-self.bouge[0]),
+                        (self.limits[2]+self.bouge[1]), (self.limits[3]+self.bouge[1])]
+            # self.size=10
+            self.stop_calculation=False;
+            # self.resolution_loop(self.limits)
+            matrix = np.zeros((20, 20))
+            self.mandelbrot_core_calculation(
+                matrix, limits=limits)  # calculate first mandelbrot
+            self.update_mandelbrot(matrix)
+            print("x:",event.xdata)
+            print("y:",event.ydata)
+
+    def onrelease(self, event):
+        self.mouse_down = False;
+        self.stop_calculation = True
+        # x0 = self.limits[0]+abs(self.limits[1]-self.limits[0])/2
+        # y0 = self.limits[2]+abs(self.limits[3]-self.limits[2])/2
+
+        # self.bouge = [x0-event.xdata, y0-event.ydata]
 
         self.limits = [(self.limits[0]-self.bouge[0]), (self.limits[1]-self.bouge[0]),
                        (self.limits[2]+self.bouge[1]), (self.limits[3]+self.bouge[1])]
@@ -230,10 +267,8 @@ class Mandelbrot:
         if(self.mode == 'real_time' or self.mode == 'refresh_graph'):
 
             for taille in [100, self.size]:
-                threads = np.array([])
                 t = threading.Thread(target=self.threadSequence, args=(
                     self.limits, taille))
-                # threads = np.append(threads, t)
                 t.start()
             self.stop_calculation = False
         elif(self.mode == 'animation'):
@@ -410,11 +445,13 @@ class Mandelbrot:
         self.fig.add_axes(self.ax)
 
         self.img = self.ax.imshow(
-            matrix.T, self.cmap, extent=self.limits, norm=colors.Normalize())
+            matrix.T, self.cmap, extent=self.limits, norm=colors.Normalize(),interpolation="bilinear")
 
         self.fig.canvas.mpl_connect(
             'scroll_event', self.onscroll)  # listen to events
         self.fig.canvas.mpl_connect('button_press_event', self.onclick)
+        self.fig.canvas.mpl_connect('motion_notify_event', self.onpan)
+        self.fig.canvas.mpl_connect('button_release_event', self.onrelease)
         self.fig.canvas.mpl_connect('key_press_event', self.onpress)
 
         plt.show()
@@ -430,7 +467,7 @@ if __name__ == "__main__":
     # newMand.limits= [-0.9171078484470955, -0.9171078462961165, -0.27754717237749293, -0.27754717022651393]
     newMand.iterations = 100
     newMand.calculation_limit = 2
-    newMand.number_of_divisions = 4
+    newMand.number_of_divisions = 2 # higher calculation speed in 2 tested on 8-core cpu's
     # newMand.style='thickness'
     # newMand.generateZoomAnimation(final_limits=newMand.limits, zoom=0.89, frames=150)
 
@@ -438,7 +475,8 @@ if __name__ == "__main__":
     newMand.show()
 
     # DONE: loop from low res to high res
-    # TODO: click doesn't recalculate already generated areas
+    # DONE: (PAN FUNCTIONALITY) on click starts calculation in low res, on release launches resolution loop or full res
+    # TODO: Pan doesn't recalculate already generated areas
     # TODO: saving 4k wallpaper method
 
 # %%
