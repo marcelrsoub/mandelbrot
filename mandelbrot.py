@@ -4,7 +4,6 @@ from matplotlib import pyplot as plt
 from matplotlib import colors
 import matplotlib as mpl
 import time
-from numba import jit
 import numpy as np
 import threading
 
@@ -55,7 +54,6 @@ class Mandelbrot:
         self.number_of_divisions = 2
         self.mouse_down = False
 
-    # @jit(forceobj=True)
     def mandelbrot_core_calculation(self, canvas, limits):  # main method
 
         width = int(len(canvas))
@@ -228,7 +226,7 @@ class Mandelbrot:
             # y0 = self.limits[2]+abs(self.limits[3]-self.limits[2])/2
 
             multiplier=1
-            size=20
+            size=30
 
             self.bouge = [-(self.x0 -event.xdata*multiplier), -(self.y0-event.ydata*multiplier)]
 
@@ -237,7 +235,7 @@ class Mandelbrot:
             # self.size=10
             self.stop_calculation=False;
             # self.resolution_loop(self.limits)
-            matrix = np.zeros((20, 20))
+            matrix = np.zeros((size, size))
             self.mandelbrot_core_calculation(
                 matrix, limits=limits)  # calculate first mandelbrot
             self.update_mandelbrot(matrix)
@@ -433,12 +431,12 @@ class Mandelbrot:
 
         mpl.rcParams['toolbar'] = 'None'  # erase buttons
 
-        self.fig = plt.figure(frameon=False)
+        self.fig = plt.figure(figsize=(6, 6), dpi=80,frameon=False)
         self.cmap = 'gnuplot2'
 
         thismanager = plt.get_current_fig_manager()
-        # thismanager.window.wm_iconbitmap("./mandel.ico") #FIXME: icon doesn't work
-        thismanager.set_window_title('Mandelbrot Set')
+        thismanager.window.wm_iconbitmap("mandel.ico") #DONE: icon doesn't work
+        thismanager.set_window_title('Mandelbrot Python / marcelrsoub')
 
         self.ax = plt.Axes(self.fig, [0., 0., 1., 1.])
         self.ax.set_axis_off()
@@ -467,7 +465,7 @@ if __name__ == "__main__":
     # newMand.limits= [-0.9171078484470955, -0.9171078462961165, -0.27754717237749293, -0.27754717022651393]
     newMand.iterations = 100
     newMand.calculation_limit = 2
-    newMand.number_of_divisions = 2 # higher calculation speed in 2 tested on 8-core cpu's
+    newMand.number_of_divisions = 4 # higher calculation speed when set to 2, tested on some 8-core cpu's
     # newMand.style='thickness'
     # newMand.generateZoomAnimation(final_limits=newMand.limits, zoom=0.89, frames=150)
 
