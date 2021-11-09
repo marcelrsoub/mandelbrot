@@ -1,13 +1,9 @@
-# %%
-from logging import raiseExceptions
 from matplotlib import pyplot as plt
 from matplotlib import colors
 import matplotlib as mpl
 import time
 import numpy as np
 import threading
-
-from numpy.core.numeric import Inf
 
 
 class Mandelbrot:
