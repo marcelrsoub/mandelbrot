@@ -36,7 +36,7 @@ class Mandelbrot:
         self.iterations = 1E2
 
         # define height to be applied
-        resolution_height = resolution*2.5  # FIXME:
+        resolution_height = resolution*2.5
 
         # limits coordinates
         self.limits = [
@@ -387,7 +387,6 @@ class Mandelbrot:
         self.fig = plt.figure(frameon=False)
         self.cmap = 'gnuplot2'
         thismanager = plt.get_current_fig_manager()
-        # thismanager.window.wm_iconbitmap("./mandel.ico") #FIXME: icon doesn't work
         thismanager.set_window_title('Mandelbrot Set')
 
         self.ax = plt.Axes(self.fig, [0., 0., 1., 1.])
